@@ -28,35 +28,42 @@ print("Ultrasound model device:", device)
 # LOAD RESNET50
 # ============================================================
 
-model = models.resnet50(weights=None)
-
-model.fc = nn.Linear(
-    model.fc.in_features,
-    2
-)
-
-
-# ============================================================
-# LOAD TRAINED WEIGHTS
-# ============================================================
+model = None
 
 model_path = os.path.join(
     os.path.dirname(__file__),
     "best_ultrasound_resnet50.pth"
 )
 
-model.load_state_dict(
-    torch.load(
-        model_path,
-        map_location=device
-    )
-)
 
-model = model.to(device)
-model.eval()
+def get_ultrasound_model():
 
-print("Ultrasound ResNet50 loaded successfully!")
+    global model
 
+    if model is None:
+
+        print("Loading Ultrasound ResNet50...")
+
+        model = models.resnet50(weights=None)
+
+        model.fc = nn.Linear(
+            model.fc.in_features,
+            2
+        )
+
+        model.load_state_dict(
+            torch.load(
+                model_path,
+                map_location=device
+            )
+        )
+
+        model = model.to(device)
+        model.eval()
+
+        print("Ultrasound ResNet50 loaded successfully!")
+
+    return model
 
 # ============================================================
 # IMAGE TRANSFORM
@@ -78,6 +85,8 @@ transform = transforms.Compose([
 # ============================================================
 
 def predict_ultrasound(image: Image.Image):
+
+    model = get_ultrasound_model()
 
     # --------------------------------------------------------
     # PREPARE IMAGE
