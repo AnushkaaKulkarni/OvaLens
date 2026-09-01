@@ -1,0 +1,36 @@
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+
+# Node
+node_modules/
+.next/
+out/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Python cache / notebooks
+.ipynb_checkpoints/
+
+# Local uploads / temporary files
+uploads/
+tmp/
+
+# Ultrasound training dataset
+ultrasound_model/dataset/
