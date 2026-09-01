@@ -55,7 +55,6 @@ export default function Explainability() {
         // ------------------------------------------------------
 
         if (!analysisId) {
-
           const savedResult =
             sessionStorage.getItem(
               "predictionResult"
@@ -88,8 +87,10 @@ if (!token) {
   throw new Error("Please sign in first.")
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
 const response = await fetch(
-  `http://localhost:8000/history/${analysisId}`,
+  `${API_BASE}/history/${analysisId}`,
   {
     headers: {
       Accept: "application/json",

@@ -52,8 +52,10 @@ export default function History() {
     return
   }
 
+  const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
   const response = await fetch(
-    "http://localhost:8000/history",
+    `${API_BASE}/history`,
     {
       headers: {
         Authorization: `Bearer ${token}`,

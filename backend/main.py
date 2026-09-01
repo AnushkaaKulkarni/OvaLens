@@ -46,12 +46,23 @@ db = client["ovalens"]
 
 predictions_collection = db["predictions"]
 
+# Configure CORS origins. Use `ALLOWED_ORIGINS` env var (comma-separated)
+default_origins = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+]
+
+env_origins = os.getenv("ALLOWED_ORIGINS")
+if env_origins:
+    # merge and strip
+    env_list = [o.strip() for o in env_origins.split(",") if o.strip()]
+    allow_origins = list(dict.fromkeys(default_origins + env_list))
+else:
+    allow_origins = default_origins
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

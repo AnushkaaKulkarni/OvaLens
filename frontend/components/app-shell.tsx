@@ -893,9 +893,10 @@ export function Auth() {
     setLoading(true)
 
     try {
+      const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
       const endpoint = isSignup
-        ? "http://localhost:8000/auth/signup"
-        : "http://localhost:8000/auth/login"
+        ? `${API_BASE}/auth/signup`
+        : `${API_BASE}/auth/login`
 
       let response: Response
 

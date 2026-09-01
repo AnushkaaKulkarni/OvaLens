@@ -121,8 +121,10 @@ export default function Results() {
 
       const token = sessionStorage.getItem("token")
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"
+
 const response = await fetch(
-  `http://localhost:8000/history/${analysisId}`, 
+  `${API_BASE}/history/${analysisId}`,
   {
     headers: {
       Authorization: `Bearer ${token}`,
