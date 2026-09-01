@@ -38,9 +38,20 @@ export default function DashboardPage() {
 
       try {
 
-        const response = await fetch(
-          "http://localhost:8000/history"
-        )
+        const token = sessionStorage.getItem("token")
+
+if (!token) {
+  throw new Error("Not authenticated")
+}
+
+const response = await fetch(
+  "http://localhost:8000/history",
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+)
 
         if (!response.ok) {
           throw new Error(

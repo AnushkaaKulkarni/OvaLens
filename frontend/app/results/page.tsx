@@ -119,10 +119,16 @@ export default function Results() {
       // HISTORY ANALYSIS
       // ======================================================
 
-      const response =
-        await fetch(
-          `http://localhost:8000/history/${analysisId}`
-        )
+      const token = sessionStorage.getItem("token")
+
+const response = await fetch(
+  `http://localhost:8000/history/${analysisId}`, 
+  {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  }
+)
 
       if (!response.ok) {
 
@@ -239,10 +245,10 @@ export default function Results() {
             </Link>
 
             <Link
+              href={`/results?id=${analysisId}`} 
               className="button ghost"
-              href="/history"
             >
-              ← Back to History
+              View Result →
             </Link>
 
           </div>

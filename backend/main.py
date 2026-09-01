@@ -15,6 +15,11 @@ from fastapi import UploadFile, File
 from PIL import Image
 import io
 import sys
+from passlib.context import CryptContext
+from jose import jwt
+from fastapi import Depends
+from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordRequestForm
 
 # Allow Python to access the sibling ultrasound_model folder
 PROJECT_ROOT = os.path.abspath(
@@ -52,6 +57,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+users_collection = db["users"]
+
+pwd_context = CryptContext(
+    schemes=["bcrypt"],
+    deprecated="auto"
+)
+
+SECRET_KEY = os.getenv(
+    "SECRET_KEY",
+    "ovalens-development-secret"
+)
+
+ALGORITHM = "HS256"
+
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="/auth/login"
+)
+
 
 # ============================================================
 # LOAD MODEL
@@ -68,10 +91,74 @@ imputer = model.named_steps["imputer"]
 # SHAP explainer
 explainer = shap.TreeExplainer(rf_classifier)
 
+def hash_password(password: str):
+    return pwd_context.hash(password)
+
+
+def verify_password(password: str, hashed_password: str):
+    return pwd_context.verify(
+        password,
+        hashed_password
+    )
+
+
+def create_access_token(user_id: str):
+    return jwt.encode(
+        {"user_id": user_id},
+        SECRET_KEY,
+        algorithm=ALGORITHM
+    )
+
+
+def get_current_user(
+    token: str = Depends(oauth2_scheme)
+):
+    try:
+        payload = jwt.decode(
+            token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
+        user_id = payload.get("user_id")
+
+        if not user_id:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid authentication token"
+            )
+
+        user = users_collection.find_one(
+            {"_id": ObjectId(user_id)}
+        )
+
+        if user is None:
+            raise HTTPException(
+                status_code=401,
+                detail="User not found"
+            )
+
+        return user
+
+    except Exception:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid authentication token"
+        )
+
 
 # ============================================================
 # PATIENT INPUT
 # ============================================================
+class SignupData(BaseModel):
+    name: str
+    email: str
+    password: str
+
+
+class LoginData(BaseModel):
+    email: str
+    password: str
 
 class PatientData(BaseModel):
 
@@ -142,13 +229,86 @@ def home():
         "mongodb": "connected"
     }
 
+# ============================================================
+# AUTHENTICATION
+# ============================================================
+
+@app.post("/auth/signup")
+def signup(data: SignupData):
+
+    existing_user = users_collection.find_one({
+        "email": data.email.lower()
+    })
+
+    if existing_user:
+        raise HTTPException(
+            status_code=400,
+            detail="Email already registered"
+        )
+
+    user = {
+        "name": data.name,
+        "email": data.email.lower(),
+        "password_hash": hash_password(data.password),
+        "created_at": datetime.utcnow()
+    }
+
+    result = users_collection.insert_one(user)
+
+    return {
+        "message": "Account created successfully",
+        "id": str(result.inserted_id)
+    }
+
+
+@app.post("/auth/login")
+def login(
+    data: OAuth2PasswordRequestForm = Depends()
+):
+
+    user = users_collection.find_one({
+        "email": data.username.lower()
+    })
+
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    if not verify_password(
+        data.password,
+        user["password_hash"]
+    ):
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password"
+        )
+
+    token = create_access_token(
+        str(user["_id"])
+    )
+
+    return {
+    "message": "Login successful",
+    "access_token": token,
+    "token_type": "bearer",
+    "user": {
+        "id": str(user["_id"]),
+        "name": user["name"],
+        "email": user["email"]
+    }
+}
 
 # ============================================================
 # PREDICT
 # ============================================================
 
 @app.post("/predict")
-def predict(data: PatientData):
+def predict(
+    data: PatientData,
+    current_user=Depends(get_current_user)
+):
 
     
 
@@ -399,9 +559,10 @@ def predict(data: PatientData):
     # ========================================================
 
     history_document = {
-        **result,
-        "created_at": datetime.utcnow()
-    }
+    **result,
+    "user_id": str(current_user["_id"]),
+    "created_at": datetime.utcnow()
+}
 
     insert_result = predictions_collection.insert_one(
         history_document
@@ -424,11 +585,15 @@ def predict(data: PatientData):
 # ============================================================
 
 @app.get("/history")
-def get_history():
+def get_history(
+    current_user=Depends(get_current_user)
+):
 
     records = list(
         predictions_collection
-        .find()
+        .find({
+            "user_id": str(current_user["_id"])
+        })
         .sort("created_at", -1)
     )
 
@@ -454,12 +619,18 @@ def get_history():
 # ============================================================
 
 @app.get("/history/{analysis_id}")
-def get_single_history(analysis_id: str):
+def get_single_history(
+    analysis_id: str,
+    current_user=Depends(get_current_user)
+):
 
     try:
         record = predictions_collection.find_one(
-            {"_id": ObjectId(analysis_id)}
-        )
+    {
+        "_id": ObjectId(analysis_id),
+        "user_id": str(current_user["_id"])
+    }
+)
 
     except Exception:
         raise HTTPException(
@@ -499,7 +670,8 @@ def get_single_history(analysis_id: str):
 @app.post("/ultrasound/predict")
 async def ultrasound_predict(
     analysis_id: str,
-    file: UploadFile = File(...)
+    file: UploadFile = File(...),
+    current_user=Depends(get_current_user)
 ):
 
     try:
@@ -523,8 +695,11 @@ async def ultrasound_predict(
         # ----------------------------------------------------
 
         existing_record = predictions_collection.find_one(
-            {"_id": object_id}
-        )
+    {
+        "_id": object_id,
+        "user_id": str(current_user["_id"])
+    }
+)
 
         if existing_record is None:
             raise HTTPException(

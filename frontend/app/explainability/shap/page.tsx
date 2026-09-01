@@ -82,9 +82,21 @@ export default function Explainability() {
         // FETCH FROM MONGODB
         // ------------------------------------------------------
 
-        const response = await fetch(
-          `http://localhost:8000/history/${analysisId}`
-        )
+        const token = sessionStorage.getItem("token")
+
+if (!token) {
+  throw new Error("Please sign in first.")
+}
+
+const response = await fetch(
+  `http://localhost:8000/history/${analysisId}`,
+  {
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  }
+)
 
         if (!response.ok) {
 

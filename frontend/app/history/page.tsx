@@ -45,37 +45,49 @@ export default function History() {
 
       try {
 
-        const response = await fetch(
-          "http://localhost:8000/history"
-        )
+  const token = sessionStorage.getItem("token")
 
-        if (!response.ok) {
-          throw new Error(
-            "Failed to fetch history"
-          )
-        }
+  if (!token) {
+    setError("Please sign in to view your history.")
+    return
+  }
 
-        const data =
-          await response.json()
+  const response = await fetch(
+    "http://localhost:8000/history",
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  )
 
-        setHistory(data.history || [])
+  if (!response.ok) {
+    throw new Error(
+      "Failed to fetch history"
+    )
+  }
 
-      } catch (error) {
+  const data =
+    await response.json()
 
-        console.error(
-          "History error:",
-          error
-        )
+  setHistory(data.history || [])
 
-        setError(
-          "Unable to load analysis history."
-        )
+} catch (error) {
 
-      } finally {
+  console.error(
+    "History error:",
+    error
+  )
 
-        setLoading(false)
+  setError(
+    "Unable to load analysis history."
+  )
 
-      }
+} finally {
+
+  setLoading(false)
+
+}
     }
 
     fetchHistory()

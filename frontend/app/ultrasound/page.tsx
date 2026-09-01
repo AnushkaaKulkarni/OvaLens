@@ -138,6 +138,12 @@ export default function Ultrasound() {
       payload
     )
 
+    const token = sessionStorage.getItem("token")
+
+if (!token) {
+  throw new Error("Please sign in first.")
+}
+
     const clinicalResponse =
       await fetch(
         "http://localhost:8000/predict",
@@ -148,6 +154,7 @@ export default function Ultrasound() {
               "application/json",
             Accept:
               "application/json",
+            Authorization: `Bearer ${token}`,
           },
           body:
             JSON.stringify(payload),
@@ -195,6 +202,9 @@ export default function Ultrasound() {
     {
       method: "POST",
       body: formData,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
     }
   )
 
