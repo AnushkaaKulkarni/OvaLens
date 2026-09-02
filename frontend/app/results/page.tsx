@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import {
@@ -33,7 +33,7 @@ type UltrasoundResult = {
   gradcam: string
 }
 
-export default function Results() {
+function ResultsContent() {
 
   const searchParams = useSearchParams()
   const analysisId = searchParams.get("id")
@@ -1040,5 +1040,26 @@ ultrasoundResult.result ? (
       </div>
 
     </AppShell>
+  )
+}
+
+export default function Results() {
+  return (
+    <Suspense
+      fallback={
+        <AppShell
+          title="Results"
+          eyebrow="Analysis"
+        >
+          <PageTitle
+            kicker="Step 3 of 3"
+            title="Loading prediction..."
+            desc="Fetching the analysis result."
+          />
+        </AppShell>
+      }
+    >
+      <ResultsContent />
+    </Suspense>
   )
 }
