@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { Suspense, useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import {
@@ -23,7 +23,7 @@ type PredictionResult = {
   explanation: Explanation[]
 }
 
-export default function Explainability() {
+function ExplainabilityContent() {
 
   const searchParams = useSearchParams()
 
@@ -767,5 +767,24 @@ const response = await fetch(
       </div>
 
     </AppShell>
+  )
+}
+
+export default function Explainability() {
+  return (
+    <Suspense fallback={
+      <AppShell
+        title="SHAP Explainability"
+        eyebrow="Explainability"
+      >
+        <PageTitle
+          kicker="Patient-level explanation"
+          title="Loading explanation..."
+          desc="Fetching the analysis from the OVALENS database."
+        />
+      </AppShell>
+    }>
+      <ExplainabilityContent />
+    </Suspense>
   )
 }
